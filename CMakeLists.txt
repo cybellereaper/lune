@@ -21,6 +21,7 @@ add_library(lune_core
     src/parser.cpp
     src/codegen.cpp
     src/gc.cpp
+    src/pretty_printer.cpp
 )
 
 target_include_directories(lune_core PUBLIC include)
