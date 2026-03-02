@@ -17,6 +17,7 @@ function Invoke-Step {
 $BuildDir = if ($env:BUILD_DIR) { $env:BUILD_DIR } else { 'build' }
 $BuildType = if ($env:BUILD_TYPE) { $env:BUILD_TYPE } else { 'Release' }
 $PackageDir = if ($env:PACKAGE_DIR) { $env:PACKAGE_DIR } else { 'dist' }
+$LlvmDir = if ($env:LLVM_DIR) { $env:LLVM_DIR } else { "$env:ProgramFiles/LLVM/lib/cmake/llvm" }
 
 $LlvmCandidates = @()
 if ($env:LLVM_DIR) {
@@ -62,5 +63,15 @@ if (-not (Test-Path $ExePath)) {
 
 Copy-Item $ExePath "$PackageDir/lune-windows-x64.exe"
 
+$ExeCandidates = @(
+  "$BuildDir/$BuildType/lune.exe",
+  "$BuildDir/lune.exe"
+)
+$ExePath = $ExeCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+if (-not $ExePath) {
+  throw 'Could not locate lune.exe after build'
+}
+
+Copy-Item $ExePath "$PackageDir/lune-windows-x64.exe"
 Compress-Archive -Path "$PackageDir/lune-windows-x64.exe" -DestinationPath "$PackageDir/lune-windows-x64.zip" -Force
 Write-Output "Built artifact: $PackageDir/lune-windows-x64.zip"
