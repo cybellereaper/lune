@@ -2,6 +2,7 @@
 #include "lune/gc.hpp"
 #include "lune/lexer.hpp"
 #include "lune/parser.hpp"
+#include "lune/pretty_printer.hpp"
 
 #include <cassert>
 #include <chrono>
@@ -112,6 +113,36 @@ void test_aot() {
     std::filesystem::remove(path);
 }
 
+
+void test_pretty_printer() {
+    lune::Lexer lexer(R"(
+        const seed = 1
+        fn main() {
+            x := seed + 1
+            if x > 1 {
+                return x
+            } else {
+                return 0
+            }
+        }
+    )");
+    lune::Parser parser(lexer.tokenize());
+    const auto program = parser.parse_program();
+
+    const auto rendered = lune::pretty_print(program);
+    const std::string expected =
+        "const seed = 1\n"
+        "fn main() {\n"
+        "  x := (seed + 1)\n"
+        "  if (x > 1) {\n"
+        "    return x\n"
+        "  } else {\n"
+        "    return 0\n"
+        "  }\n"
+        "}";
+    assert(rendered == expected);
+}
+
 void test_performance_timings() {
     constexpr std::size_t iterations = 150;
     const auto source = build_large_program(12, 40);
@@ -151,6 +182,7 @@ int main() {
     test_jit();
     test_gc();
     test_aot();
+    test_pretty_printer();
     test_performance_timings();
     std::cout << "All tests passed\n";
 }
