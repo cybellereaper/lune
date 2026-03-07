@@ -4,11 +4,6 @@
 namespace lune {
 
 namespace {
-template <typename T, typename... Args>
-std::shared_ptr<T> make_node(Args&&... args) {
-    return std::make_shared<T>(T{std::forward<Args>(args)...});
-}
-
 ExprPtr make_expr(Expr::Variant node) { return std::make_shared<Expr>(Expr{std::move(node)}); }
 StmtPtr make_stmt(Stmt::Variant node) { return std::make_shared<Stmt>(Stmt{std::move(node)}); }
 }
@@ -19,7 +14,12 @@ Program Parser::parse_program() {
     diagnostics_.clear();
     Program program;
     while (!is_at_end()) {
+        const auto before = current_;
         program.items.push_back(declaration());
+        if (current_ == before && !is_at_end()) {
+            add_error_here("Parser made no progress; resynchronizing");
+            synchronize();
+        }
     }
     return program;
 }
@@ -35,6 +35,7 @@ StmtPtr Parser::declaration() {
 StmtPtr Parser::statement() {
     if (match(TokenType::LBrace)) return block_statement();
     if (match(TokenType::KwIf)) return if_statement();
+    if (match(TokenType::KwWhile)) return while_statement();
     if (match(TokenType::KwReturn)) return return_statement();
     return simple_statement();
 }
@@ -60,6 +61,13 @@ StmtPtr Parser::if_statement() {
     }
 
     return make_stmt(IfStmt{.condition = condition, .then_branch = std::move(then_branch), .else_branch = std::move(else_branch)});
+}
+
+StmtPtr Parser::while_statement() {
+    auto condition = expression();
+    consume(TokenType::LBrace, "Expected '{' after while condition");
+    auto body = std::get<BlockStmt>(block_statement()->node);
+    return make_stmt(WhileStmt{.condition = condition, .body = std::move(body)});
 }
 
 StmtPtr Parser::return_statement() {
@@ -92,12 +100,12 @@ StmtPtr Parser::const_declaration() {
 }
 
 StmtPtr Parser::simple_statement() {
-    if (check(TokenType::Identifier) && tokens_[current_ + 1].type == TokenType::ShortDecl) {
+    if (check(TokenType::Identifier) && check_next(TokenType::ShortDecl)) {
         const auto name = advance().lexeme;
         advance();
         return make_stmt(ShortDeclStmt{.name = name, .expr = expression()});
     }
-    if (check(TokenType::Identifier) && tokens_[current_ + 1].type == TokenType::Assign) {
+    if (check(TokenType::Identifier) && check_next(TokenType::Assign)) {
         const auto name = advance().lexeme;
         advance();
         return make_stmt(AssignStmt{.name = name, .expr = expression()});
@@ -182,6 +190,7 @@ ExprPtr Parser::primary() {
         return expr;
     }
     add_error_here("Expected expression");
+    if (!is_at_end()) advance();
     return make_expr(NullExpr{});
 }
 
@@ -194,6 +203,9 @@ const Token& Parser::advance() {
     return previous();
 }
 bool Parser::check(TokenType type) const { return !is_at_end() && peek().type == type; }
+bool Parser::check_next(TokenType type) const {
+    return current_ + 1 < tokens_.size() && tokens_[current_ + 1].type == type;
+}
 bool Parser::match(TokenType type) {
     if (!check(type)) return false;
     advance();
@@ -202,11 +214,25 @@ bool Parser::match(TokenType type) {
 const Token& Parser::consume(TokenType type, const char* error_message) {
     if (check(type)) return advance();
     add_error_here(error_message);
+    if (!is_at_end()) return advance();
     return peek();
 }
 
 void Parser::add_error_here(const char* error_message) {
     diagnostics_.push_back(Diagnostic{.message = error_message, .line = peek().line, .column = peek().column});
+}
+
+void Parser::synchronize() {
+    if (is_at_end()) return;
+    advance();
+    while (!is_at_end()) {
+        if (previous().type == TokenType::RBrace) return;
+        if (check(TokenType::KwFn) || check(TokenType::KwConst) || check(TokenType::KwIf) ||
+            check(TokenType::KwWhile) || check(TokenType::KwReturn)) {
+            return;
+        }
+        advance();
+    }
 }
 
 } // namespace lune

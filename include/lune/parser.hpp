@@ -19,14 +19,17 @@ private:
     [[nodiscard]] const Token& previous() const;
     const Token& advance();
     bool check(TokenType type) const;
+    bool check_next(TokenType type) const;
     bool match(TokenType type);
     const Token& consume(TokenType type, const char* error_message);
     void add_error_here(const char* error_message);
+    void synchronize();
 
     StmtPtr declaration();
     StmtPtr statement();
     StmtPtr block_statement();
     StmtPtr if_statement();
+    StmtPtr while_statement();
     StmtPtr return_statement();
     StmtPtr function_declaration();
     StmtPtr const_declaration();

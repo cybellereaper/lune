@@ -9,6 +9,7 @@ TokenType identifier_type(std::string_view lexeme) {
     if (lexeme == "fn") return TokenType::KwFn;
     if (lexeme == "if") return TokenType::KwIf;
     if (lexeme == "else") return TokenType::KwElse;
+    if (lexeme == "while") return TokenType::KwWhile;
     if (lexeme == "const") return TokenType::KwConst;
     if (lexeme == "return") return TokenType::KwReturn;
     if (lexeme == "true") return TokenType::KwTrue;
@@ -29,6 +30,7 @@ std::string_view to_string(TokenType type) {
     case TokenType::KwReturn: return "return";
     case TokenType::KwIf: return "if";
     case TokenType::KwElse: return "else";
+    case TokenType::KwWhile: return "while";
     case TokenType::KwTrue: return "true";
     case TokenType::KwFalse: return "false";
     case TokenType::KwNull: return "null";
