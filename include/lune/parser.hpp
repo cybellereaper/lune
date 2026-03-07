@@ -27,6 +27,7 @@ private:
     StmtPtr statement();
     StmtPtr block_statement();
     StmtPtr if_statement();
+    StmtPtr while_statement();
     StmtPtr return_statement();
     StmtPtr function_declaration();
     StmtPtr const_declaration();
