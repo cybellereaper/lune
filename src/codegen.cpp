@@ -145,6 +145,31 @@ public:
         builder->SetInsertPoint(merge_bb);
     }
 
+
+    void emit(const WhileStmt& s) {
+        auto* fn = builder->GetInsertBlock()->getParent();
+
+        auto* cond_bb = llvm::BasicBlock::Create(*context, "while.cond", fn);
+        auto* body_bb = llvm::BasicBlock::Create(*context, "while.body");
+        auto* end_bb = llvm::BasicBlock::Create(*context, "while.end");
+
+        builder->CreateBr(cond_bb);
+
+        builder->SetInsertPoint(cond_bb);
+        auto* cond = emit_expr(s.condition);
+        cond = builder->CreateFCmpONE(cond, llvm::ConstantFP::get(llvm::Type::getDoubleTy(*context), 0.0), "whilecond");
+        builder->CreateCondBr(cond, body_bb, end_bb);
+
+        fn->insert(fn->end(), body_bb);
+        builder->SetInsertPoint(body_bb);
+        emit(s.body);
+        if (!builder->GetInsertBlock()->getTerminator()) {
+            builder->CreateBr(cond_bb);
+        }
+
+        fn->insert(fn->end(), end_bb);
+        builder->SetInsertPoint(end_bb);
+    }
     void emit(const FunctionDecl& s) {
         std::vector<llvm::Type*> args(s.params.size(), llvm::Type::getDoubleTy(*context));
         auto* type = llvm::FunctionType::get(llvm::Type::getDoubleTy(*context), args, false);

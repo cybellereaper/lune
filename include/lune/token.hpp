@@ -16,6 +16,7 @@ enum class TokenType {
     KwReturn,
     KwIf,
     KwElse,
+    KwWhile,
     KwTrue,
     KwFalse,
     KwNull,

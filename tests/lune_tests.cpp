@@ -38,6 +38,13 @@ void test_lexer() {
     assert(tokens[1].type == lune::TokenType::Identifier);
 }
 
+void test_lexer_while_keyword() {
+    lune::Lexer lexer("while true { return 1 }");
+    const auto tokens = lexer.tokenize();
+    assert(tokens.size() >= 2);
+    assert(tokens[0].type == lune::TokenType::KwWhile);
+}
+
 
 void test_lexer_trivia_and_diagnostics() {
     lune::Lexer lexer(R"(  // lead
@@ -53,6 +60,28 @@ const x = !
     assert(diagnostics[0].message.find("Unexpected token !") != std::string::npos);
 }
 
+
+void test_parser_while_statement() {
+    lune::Lexer lexer(R"(
+        fn main() {
+            i := 0
+            while i < 3 {
+                i = i + 1
+            }
+            return i
+        }
+    )");
+    lune::Parser parser(lexer.tokenize());
+    const auto program = parser.parse_program();
+    assert(parser.diagnostics().empty());
+    assert(program.items.size() == 1);
+
+    const auto* fn = std::get_if<lune::FunctionDecl>(&program.items[0]->node);
+    assert(fn != nullptr);
+    assert(fn->body.statements.size() == 3);
+    assert(std::holds_alternative<lune::WhileStmt>(fn->body.statements[1]->node));
+}
+
 void test_parser_diagnostics() {
     lune::Lexer lexer("fn main( { return 1 }");
     lune::Parser parser(lexer.tokenize());
@@ -61,6 +90,28 @@ void test_parser_diagnostics() {
     const auto& diagnostics = parser.diagnostics();
     assert(!diagnostics.empty());
     assert(diagnostics[0].message.find("Expected") != std::string::npos);
+}
+
+
+void test_jit_while_loop() {
+    lune::Lexer lexer(R"(
+        fn main() {
+            i := 1
+            total := 0
+            while i <= 5 {
+                total = total + i
+                i = i + 1
+            }
+            return total
+        }
+    )");
+    lune::Parser parser(lexer.tokenize());
+    auto program = parser.parse_program();
+
+    lune::Codegen codegen("jit_while_test");
+    codegen.compile(program);
+    const auto value = codegen.run_jit_main();
+    assert(value == 15.0);
 }
 
 void test_jit() {
@@ -120,6 +171,9 @@ void test_pretty_printer() {
         fn main() {
             x := seed + 1
             if x > 1 {
+                while x < 4 {
+                    x = x + 1
+                }
                 return x
             } else {
                 return 0
@@ -135,6 +189,9 @@ void test_pretty_printer() {
         "fn main() {\n"
         "  x := (seed + 1)\n"
         "  if (x > 1) {\n"
+        "    while (x < 4) {\n"
+        "      x = (x + 1)\n"
+        "    }\n"
         "    return x\n"
         "  } else {\n"
         "    return 0\n"
@@ -177,8 +234,11 @@ void test_performance_timings() {
 
 int main() {
     test_lexer();
+    test_lexer_while_keyword();
     test_lexer_trivia_and_diagnostics();
+    test_parser_while_statement();
     test_parser_diagnostics();
+    test_jit_while_loop();
     test_jit();
     test_gc();
     test_aot();

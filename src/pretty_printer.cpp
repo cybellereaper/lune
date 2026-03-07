@@ -140,6 +140,15 @@ private:
         }
     }
 
+
+    void print_stmt_node(const WhileStmt& stmt, std::size_t indent, std::ostringstream& target) {
+        target << "while " << print_expr(stmt.condition) << " {\n";
+        print_statement_list(stmt.body.statements, indent + 1, target);
+        target << "\n";
+        print_indent(indent, target);
+        target << "}";
+    }
+
     void print_stmt_node(const FunctionDecl& stmt, std::size_t indent, std::ostringstream& target) {
         target << "fn " << stmt.name << "(";
         for (std::size_t i = 0; i < stmt.params.size(); ++i) {

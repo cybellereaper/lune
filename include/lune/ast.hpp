@@ -57,6 +57,11 @@ struct IfStmt {
     std::optional<BlockStmt> else_branch;
 };
 
+struct WhileStmt {
+    ExprPtr condition;
+    BlockStmt body;
+};
+
 struct FunctionDecl {
     std::string name;
     std::vector<std::string> params;
@@ -64,7 +69,7 @@ struct FunctionDecl {
 };
 
 struct Stmt {
-    using Variant = std::variant<ExprStmt, ConstDeclStmt, ShortDeclStmt, AssignStmt, ReturnStmt, IfStmt, FunctionDecl, BlockStmt>;
+    using Variant = std::variant<ExprStmt, ConstDeclStmt, ShortDeclStmt, AssignStmt, ReturnStmt, IfStmt, WhileStmt, FunctionDecl, BlockStmt>;
     Variant node;
 };
 
